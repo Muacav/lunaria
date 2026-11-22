@@ -1,5 +1,7 @@
 # Lunaria
 
+**Live:** https://lunaria-six.vercel.app
+
 A private period and cycle tracker that installs on a phone as a web app,
 with a read-only partner view. English, French and Italian. Free for
 everyone who signs up: it runs on Vercel's free plan and the Supabase free
@@ -73,17 +75,12 @@ It is an estimate, not contraception, and the app says so.
 Project `lunaria` (`njpgydtncadvwzhbxgpo`, Frankfurt). Schema:
 `supabase/schema.sql` (already applied).
 
-Two settings in the Supabase dashboard:
+Auth settings (already applied):
 
-1. **Authentication → Sign In / Providers → Email → Confirm email: off.**
-   Supabase's built-in mailer only sends to members of the Supabase team,
-   so with confirmation on, friends could never confirm their account. To
-   keep confirmation on, add your own SMTP (e.g. Resend) under
-   **Authentication → Emails → SMTP Settings**. Password-reset emails need
-   SMTP too.
-2. **Authentication → URL Configuration:** set **Site URL** to the Vercel
-   address (e.g. `https://lunaria.vercel.app`) and add it to
-   **Redirect URLs**.
+- **Confirm email: off**, so anyone can sign up and start right away.
+- **Site URL:** `https://lunaria-six.vercel.app`; redirect URLs also allow
+  Vercel preview deployments and `localhost:5173` / `localhost:4173`.
+- **SMTP:** Resend (see below), email rate limit 30 per hour.
 
 ### Account emails (Resend)
 
@@ -109,11 +106,10 @@ keeps it awake; if it pauses, restore it from the dashboard.
 
 ## Hosting (Vercel, free)
 
-1. On vercel.com: **Add New → Project → Import** this GitHub repository.
-2. Keep the detected settings (Vite; `vercel.json` sets the rest) and
-   **Deploy**. No environment variables are needed: the public Supabase
-   URL and publishable key are in `.env.production`.
-3. Every push to `main` redeploys automatically.
+Vercel project `lunaria` is linked to this repository: every push to `main`
+deploys to https://lunaria-six.vercel.app (tests run first, see
+`vercel.json`). No environment variables are needed: the public Supabase URL
+and publishable key are in `.env.production`.
 
 ## Install on a phone
 
