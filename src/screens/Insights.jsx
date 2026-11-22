@@ -59,15 +59,15 @@ export default function Insights({ t, locale, analysis, state, periodSet }) {
       <h2 className="section-title">{t('ins.history')}</h2>
       {history.length ? (
         <ul className="history">
-          {history.map((h) => (
-            <li key={h.start}>
+          {history.map((h, idx) => (
+            <li key={h.start} style={{ '--i': idx }}>
               <div className="row-top">
                 <span>{fmt(h.start, locale, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                 <span>
                   <strong>{t('ins.cycleRow', { n: h.length })}</strong> · {t('ins.periodPart', { n: h.periodLen })}
                 </span>
               </div>
-              <div className="bar" style={{ width: `${(h.length / maxLen) * 100}%` }}>
+              <div className="bar" style={{ width: `${(h.length / maxLen) * 100}%`, '--i': idx }}>
                 <span className="seg" style={{ left: 0, width: `${(h.periodLen / h.length) * 100}%`, background: 'var(--period)' }} />
                 <span
                   className="seg"
@@ -93,8 +93,8 @@ export default function Insights({ t, locale, analysis, state, periodSet }) {
       <h2 className="section-title">{t('ins.symptoms')}</h2>
       {top.length ? (
         <ul className="freq">
-          {top.map(([k, n]) => (
-            <li key={k}>
+          {top.map(([k, n], idx) => (
+            <li key={k} style={{ '--i': idx }}>
               <span>{t(k)}</span>
               <span className="track">
                 <span className="fill" style={{ display: 'block', width: `${(n / topMax) * 100}%`, background: k.startsWith('mood') ? 'var(--follicular)' : 'var(--luteal)' }} />

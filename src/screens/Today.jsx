@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Sparkles, NotebookPen } from 'lucide-react';
 import Dial from '../components/Dial.jsx';
+import PhaseArt from '../components/PhaseArt.jsx';
+import { greetingKey } from '../lib/i18n.js';
 import WeekStrip from '../components/WeekStrip.jsx';
 import { logLabels } from '../components/LogSheet.jsx';
 import { toast } from '../components/toast.jsx';
@@ -29,14 +31,19 @@ export default function Today({ t, locale, analysis, state, today, periodSet, on
   return (
     <div data-phase={phaseKey}>
       <header className="today-head">
-        <h1 className="hello">{t('today.hello', { name: state.profile.name || '' })}</h1>
-        <span className="tiny">{fmt(today, locale, { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+        <h1 className="hello">
+          <span className="greet">{t(greetingKey())},</span>
+          <span className="script">{state.profile.name}</span>
+        </h1>
+        <span className="tiny" style={{ textAlign: 'right' }}>
+          {fmt(today, locale, { weekday: 'long', day: 'numeric', month: 'long' })}
+        </span>
       </header>
 
       <WeekStrip analysis={analysis} periodSet={periodSet} logs={state.logs} today={today} locale={locale} onPick={onDay} />
 
       <div data-phase={preview || phaseKey}>
-        <Dial analysis={analysis} t={t} locale={locale} onPreview={setPreview} />
+        <Dial key={analysis.currentStart || 'none'} analysis={analysis} t={t} locale={locale} onPreview={setPreview} />
       </div>
 
       {analysis.hasData && (
@@ -66,8 +73,9 @@ export default function Today({ t, locale, analysis, state, today, periodSet, on
       </div>
 
       {analysis.hasData && (
-        <section className="phase-story" data-phase={phaseKey}>
+        <section className="phase-story with-art" data-phase={phaseKey}>
           <h2>{t('phase.' + phaseKey)}</h2>
+          <PhaseArt phase={phaseKey} size={104} />
           <p>{t('about.' + phaseKey)}</p>
           <div className="tip">
             <Sparkles size={18} />

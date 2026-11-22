@@ -9,6 +9,11 @@ import { togglePeriodDay } from '../lib/store.js';
 export default function Calendar({ t, locale, analysis, state, today, periodSet, onLog, focusDay, onFocusDay }) {
   const [month, setMonth] = useState(startOfMonth(focusDay || today));
   const [editing, setEditing] = useState(false);
+  const [dir, setDir] = useState(null);
+  const move = (n) => {
+    setDir(n > 0 ? 'slide-next' : 'slide-prev');
+    setMonth((m) => addMonths(m, n));
+  };
   const touch = useRef(null);
 
   const first = weekday(month);
@@ -28,7 +33,7 @@ export default function Calendar({ t, locale, analysis, state, today, periodSet,
   function onTouchEnd(e) {
     if (touch.current == null) return;
     const dx = e.changedTouches[0].clientX - touch.current;
-    if (Math.abs(dx) > 60) setMonth(addMonths(month, dx < 0 ? 1 : -1));
+    if (Math.abs(dx) > 60) move(dx < 0 ? 1 : -1);
     touch.current = null;
   }
 
@@ -37,10 +42,10 @@ export default function Calendar({ t, locale, analysis, state, today, periodSet,
       <div className="cal-head">
         <h1>{fmt(month, locale, { month: 'long', year: 'numeric' })}</h1>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="icon-btn" aria-label={t('cal.prev')} onClick={() => setMonth(addMonths(month, -1))}>
+          <button className="icon-btn" aria-label={t('cal.prev')} onClick={() => move(-1)}>
             <ChevronLeft size={20} />
           </button>
-          <button className="icon-btn" aria-label={t('cal.next')} onClick={() => setMonth(addMonths(month, 1))}>
+          <button className="icon-btn" aria-label={t('cal.next')} onClick={() => move(1)}>
             <ChevronRight size={20} />
           </button>
         </div>
@@ -48,7 +53,12 @@ export default function Calendar({ t, locale, analysis, state, today, periodSet,
 
       {editing && <p className="edit-hint">{t('cal.editHint')}</p>}
 
-      <div className={`cal-grid ${editing ? 'cal-editing' : ''}`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div
+        key={month}
+        className={`cal-grid ${editing ? 'cal-editing' : ''} ${dir || ''}`}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         {dows.map((d, i) => (
           <div className="cal-dow" key={i}>
             {d}

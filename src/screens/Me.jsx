@@ -1,5 +1,5 @@
 import { useRef, useState, useSyncExternalStore } from 'react';
-import { Copy, Share2, LogOut, Download, Upload, Trash2, CalendarPlus } from 'lucide-react';
+import { Copy, Share2, LogOut, Download, Upload, Trash2, CalendarPlus, Heart } from 'lucide-react';
 import { LANGS, relTime } from '../lib/i18n.js';
 import { setState, exportData, importData, resetAll } from '../lib/store.js';
 import { buildIcs, downloadFile } from '../lib/ics.js';
@@ -46,6 +46,8 @@ export default function Me({ t, state, analysis }) {
   return (
     <div>
       <h1 className="screen-title">{t('me.title')}</h1>
+
+      {sync.syncAvailable && <AccountGroup t={t} />}
 
       <Group title={t('me.profile')}>
         <label className="row">
@@ -143,15 +145,28 @@ export default function Me({ t, state, analysis }) {
         <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={onImport} />
       </Group>
 
-      <button
-        className="btn btn-danger btn-block"
-        onClick={() => {
-          if (window.confirm(t('me.deleteConfirm'))) resetAll();
-        }}
-      >
-        <Trash2 size={17} />
-        {t('me.delete')}
-      </button>
+      {sync.syncAvailable ? (
+        <button
+          className="btn btn-danger btn-block"
+          onClick={() => {
+            if (window.confirm(t('me.deleteAccountConfirm')))
+              sync.deleteAccount().catch((e) => toast(t('err.generic', { msg: e.message })));
+          }}
+        >
+          <Trash2 size={17} />
+          {t('me.deleteAccount')}
+        </button>
+      ) : (
+        <button
+          className="btn btn-danger btn-block"
+          onClick={() => {
+            if (window.confirm(t('me.deleteConfirm'))) resetAll();
+          }}
+        >
+          <Trash2 size={17} />
+          {t('me.delete')}
+        </button>
+      )}
 
       <p className="tiny" style={{ marginTop: 24 }}>
         {t('me.about')}
@@ -165,6 +180,36 @@ export default function Me({ t, state, analysis }) {
         </Sheet>
       )}
     </div>
+  );
+}
+
+function AccountGroup({ t }) {
+  const status = useSync();
+  const invite = () => {
+    const url = sync.appUrl();
+    const text = t('me.inviteText');
+    if (navigator.share) navigator.share({ title: 'Lunaria', text, url }).catch(() => {});
+    else navigator.clipboard.writeText(`${text} ${url}`).then(() => toast(t('me.inviteCopied')));
+  };
+  return (
+    <Group title={t('me.account')}>
+      <div className="row small">
+        <span>{t('me.signedInAs', { email: status.user?.email || '' })}</span>
+      </div>
+      <button className="row" onClick={invite}>
+        <span>{t('me.invite')}</span>
+        <Heart size={18} />
+      </button>
+      <button
+        className="row"
+        onClick={() => {
+          if (window.confirm(t('me.signOutConfirm'))) sync.signOut();
+        }}
+      >
+        <span>{t('me.signOut')}</span>
+        <LogOut size={18} />
+      </button>
+    </Group>
   );
 }
 
@@ -183,9 +228,6 @@ function useSync() {
 
 function SharePanel({ t, state }) {
   const status = useSync();
-  const [mode, setMode] = useState('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
 
@@ -231,48 +273,9 @@ function SharePanel({ t, state }) {
           {t('share.intro')}
         </p>
 
-        {!user && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              run(async () => {
-                if (mode === 'signup') {
-                  const res = await sync.signUp(email, password);
-                  if (!res.session) setMsg(t('share.confirmEmail'));
-                } else await sync.signIn(email, password);
-              });
-            }}
-            style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
-          >
-            <label className="field">
-              <span>{t('share.email')}</span>
-              <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            </label>
-            <label className="field">
-              <span>{t('share.password')}</span>
-              <input
-                type="password"
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                minLength={8}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </label>
-            <button className="btn btn-primary" disabled={busy}>
-              {mode === 'signup' ? t('share.signUp') : t('share.signIn')}
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')}>
-              {mode === 'signup' ? t('share.haveAccount') : t('share.newAccount')}
-            </button>
-          </form>
-        )}
-
         {user && (
           <>
             <div className="small">
-              {t('share.signedIn', { email: user.email })}
-              <br />
               <span className="tiny">
                 {status.state === 'syncing'
                   ? t('share.syncing')
@@ -338,10 +341,6 @@ function SharePanel({ t, state }) {
               </>
             )}
 
-            <button className="btn btn-ghost" onClick={() => run(sync.signOut)}>
-              <LogOut size={16} />
-              {t('share.signOut')}
-            </button>
           </>
         )}
 

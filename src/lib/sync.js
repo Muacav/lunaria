@@ -1,15 +1,16 @@
-// Optional cloud sync with Supabase (free tier). Turned on when
-// VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set at build time.
-// Without them the app is fully local.
+// Accounts and cloud sync with Supabase (free tier). Turned on when
+// VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set at build time; then an
+// account is required and every user (her, her friends) has their own data.
+// Without them the app runs fully local, which is handy for development.
 //
 // Tables (see supabase/schema.sql):
-//   cycle_data      her full data, readable only by her (row level security)
+//   cycle_data      each user's full data, readable only by that user (RLS)
 //   partner_shares  the curated snapshot behind a partner link
-// The partner reads through get_partner_view(token), so no account is needed
-// on his side and he can never list or read anything else.
+// The partner reads through get_partner_view(token), so he needs no account
+// and can never list or read anything else.
 
 import { createClient } from '@supabase/supabase-js';
-import { getState, setState, subscribe } from './store.js';
+import { getState, setState, subscribe, resetAll } from './store.js';
 import { buildSnapshot } from './snapshot.js';
 
 const URL = import.meta.env.VITE_SUPABASE_URL;
@@ -17,11 +18,14 @@ const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const syncAvailable = Boolean(URL && KEY);
 export const supabase = syncAvailable
-  ? createClient(URL, KEY, { auth: { persistSession: true, storageKey: 'lunaria:auth' } })
+  ? createClient(URL, KEY, { auth: { persistSession: true, storageKey: 'lunaria:auth', detectSessionInUrl: true } })
   : null;
 
-// ---- tiny status store for the UI --------------------------------------
-let status = { state: 'idle', at: null, error: null, user: null };
+// ---- status store for the UI ---------------------------------------------
+// ready:      the saved session has been checked
+// reconciled: her cloud data has been loaded after sign-in
+// recovery:   she opened a password-reset link and must choose a new one
+let status = { state: 'idle', at: null, error: null, user: null, ready: !syncAvailable, reconciled: false, recovery: false };
 const statusListeners = new Set();
 function setStatus(patch) {
   status = { ...status, ...patch };
@@ -35,14 +39,23 @@ export function subscribeSync(fn) {
   return () => statusListeners.delete(fn);
 }
 
-// ---- auth ----------------------------------------------------------------
-export async function signUp(email, password) {
+// ---- auth ------------------------------------------------------------------
+const redirect = () => window.location.origin + window.location.pathname;
+
+export async function signUp(email, password, name) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: window.location.origin + window.location.pathname },
+    options: { emailRedirectTo: redirect(), data: { name } },
   });
   if (error) throw error;
+  // Supabase answers a sign-up for an existing confirmed email with a user
+  // that has no identities, instead of an error.
+  if (data.user && data.user.identities?.length === 0) {
+    const e = new Error('User already registered');
+    e.code = 'user_already_exists';
+    throw e;
+  }
   return data;
 }
 
@@ -51,13 +64,46 @@ export async function signIn(email, password) {
   if (error) throw error;
 }
 
-export async function signOut() {
-  await supabase.auth.signOut();
+export async function sendReset(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: redirect() });
+  if (error) throw error;
 }
 
-// ---- data sync -----------------------------------------------------------
+export async function setNewPassword(password) {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+  setStatus({ recovery: false });
+}
+
+export async function signOut() {
+  await supabase.auth.signOut();
+  resetAll();
+}
+
+export async function deleteAccount() {
+  const { error } = await supabase.rpc('delete_my_account');
+  if (error) throw error;
+  await supabase.auth.signOut();
+  resetAll();
+}
+
+// Turns Supabase errors into a key from i18n.js.
+export function authErrorKey(e) {
+  const code = e?.code || '';
+  const msg = (e?.message || '').toLowerCase();
+  if (code === 'invalid_credentials' || msg.includes('invalid login')) return 'err.invalid';
+  if (code === 'user_already_exists' || msg.includes('already registered')) return 'err.exists';
+  if (code === 'email_not_confirmed' || msg.includes('not confirmed')) return 'err.unconfirmed';
+  if (code === 'weak_password' || msg.includes('password should')) return 'err.weak';
+  if (code.startsWith('over_') || msg.includes('rate limit')) return 'err.rate';
+  if (code === 'email_address_not_authorized' || msg.includes('not authorized')) return 'err.emailBlocked';
+  if (msg.includes('fetch') || msg.includes('network')) return 'err.network';
+  return null;
+}
+
+// ---- data sync ---------------------------------------------------------------
 function cloudPayload(s) {
-  const { pinHash, ...rest } = s;
+  const { pinHash, lastWelcome, ...rest } = s;
   return rest;
 }
 
@@ -69,6 +115,7 @@ async function pull(userId) {
 
 async function push(userId) {
   const s = getState();
+  if (s.ownerId !== userId) return;
   setStatus({ state: 'syncing' });
   const { error } = await supabase
     .from('cycle_data')
@@ -87,23 +134,39 @@ export async function pushSnapshot(userId = status.user?.id) {
   if (error) throw error;
 }
 
-// On sign-in: keep whichever copy is newer, then upload.
-async function reconcile(userId) {
+// After sign-in: make sure this phone holds this user's data. Another
+// person's leftovers are cleared first, then the newer copy wins.
+async function reconcile(user) {
+  const userId = user.id;
   try {
-    setStatus({ state: 'syncing' });
+    setStatus({ state: 'syncing', reconciled: false });
+    let local = getState();
+    if (local.ownerId && local.ownerId !== userId) {
+      resetAll();
+      local = getState();
+    }
     const remote = await pull(userId);
-    const local = getState();
-    const remoteAt = remote?.data?.updatedAt || 0;
-    const localHasData = local.periodDays.length > 0 || Object.keys(local.logs).length > 0;
-    if (remote && (remoteAt > local.updatedAt || !localHasData)) {
-      setState((s) => ({ ...s, ...remote.data, pinHash: s.pinHash, onboarded: true }), { local: true, fromCloud: true });
+    const localHasData = local.onboarded && (local.periodDays.length > 0 || Object.keys(local.logs).length > 0);
+    if (remote && (!localHasData || (remote.data?.updatedAt || 0) >= local.updatedAt)) {
+      setState(
+        (s) => ({ ...s, ...remote.data, profile: { ...s.profile, ...remote.data.profile }, ownerId: userId, pinHash: s.pinHash, lastWelcome: s.lastWelcome }),
+        { local: true, fromCloud: true }
+      );
       setStatus({ state: 'ok', at: Date.now(), error: null });
       if (getState().share.token) await pushSnapshot(userId);
     } else {
-      await push(userId);
+      const metaName = user.user_metadata?.name;
+      setState(
+        (s) => ({ ...s, ownerId: userId, profile: { ...s.profile, name: s.profile.name || metaName || '' } }),
+        { local: true }
+      );
+      if (getState().onboarded) await push(userId);
+      else setStatus({ state: 'ok', error: null });
     }
   } catch (e) {
     setStatus({ state: 'error', error: e.message });
+  } finally {
+    setStatus({ reconciled: true });
   }
 }
 
@@ -119,14 +182,17 @@ export function startSync() {
   if (!supabase) return;
   supabase.auth.getSession().then(({ data }) => {
     const user = data.session?.user || null;
-    setStatus({ user });
-    if (user) reconcile(user.id);
+    setStatus({ user, ready: true, reconciled: !user });
+    if (user) reconcile(user);
   });
   supabase.auth.onAuthStateChange((event, session) => {
     const user = session?.user || null;
+    if (event === 'PASSWORD_RECOVERY') setStatus({ recovery: true });
     const changed = user?.id !== status.user?.id;
-    setStatus({ user });
-    if (user && changed) reconcile(user.id);
+    if (!changed) return setStatus({ user });
+    setStatus({ user, ready: true, reconciled: !user });
+    // Supabase advises not to await other calls inside this callback.
+    if (user) setTimeout(() => reconcile(user), 0);
   });
   subscribe((_s, meta) => {
     if (!meta.local) schedulePush();
@@ -135,7 +201,7 @@ export function startSync() {
   window.addEventListener('online', schedulePush);
 }
 
-// ---- partner link --------------------------------------------------------
+// ---- partner link --------------------------------------------------------------
 function randomToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -162,7 +228,11 @@ export async function revokeShare() {
 }
 
 export function shareUrl(token) {
-  return `${window.location.origin}${window.location.pathname}#/p/${token}`;
+  return `${redirect()}#/p/${token}`;
+}
+
+export function appUrl() {
+  return redirect();
 }
 
 export async function fetchPartnerView(token) {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Heart, CalendarPlus } from 'lucide-react';
 import Dial from '../components/Dial.jsx';
+import PhaseArt from '../components/PhaseArt.jsx';
 import { Upcoming } from './Today.jsx';
 import { analyze } from '../lib/cycle.js';
 import { todayISO, fmt } from '../lib/dates.js';
@@ -96,7 +97,7 @@ export default function Partner({ token }) {
   return (
     <div className="app" data-phase={phaseKey} style={{ paddingBottom: 40 }}>
       <header className="today-head">
-        <h1 className="hello">{t('p.title', { name: snap.name })}</h1>
+        <h1 className="partner-title">{t('p.title', { name: snap.name })}</h1>
         <span className="partner-badge">
           <Heart size={14} fill="var(--period)" color="var(--period)" />
         </span>
@@ -114,8 +115,9 @@ export default function Partner({ token }) {
         </div>
       )}
 
-      <section className="phase-story">
+      <section className="phase-story with-art">
         <h2>{t('p.support')}</h2>
+        <PhaseArt phase={phaseKey} size={104} />
         <p>{t('ps.' + phaseKey)}</p>
       </section>
 

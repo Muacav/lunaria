@@ -48,5 +48,24 @@ as $$
   where s.token = p_token;
 $$;
 
-revoke all on function public.get_partner_view(text) from public;
+revoke all on function public.get_partner_view(text) from public, anon, authenticated;
 grant execute on function public.get_partner_view(text) to anon, authenticated;
+
+-- Lets a signed-in user delete their own account. Their cycle_data and
+-- partner link rows go with it (on delete cascade).
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not signed in';
+  end if;
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+revoke all on function public.delete_my_account() from public, anon, authenticated;
+grant execute on function public.delete_my_account() to authenticated;

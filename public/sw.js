@@ -2,7 +2,7 @@
 // connection. Network first for pages, cache first for built assets.
 // Requests to the sync service are never cached.
 
-const CACHE = 'lunaria-v1';
+const CACHE = 'lunaria-v2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icon.svg'])));

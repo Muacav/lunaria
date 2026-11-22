@@ -1,87 +1,114 @@
 import { useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
+import PhaseArt from '../components/PhaseArt.jsx';
 import { LANGS } from '../lib/i18n.js';
 import { addDays, todayISO } from '../lib/dates.js';
 import { setState } from '../lib/store.js';
+import { useCountUp } from '../lib/motion.js';
 
-export default function Onboarding({ t, state }) {
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState(state.profile.name);
+// Set-up after the account is created, one question per screen:
+//   name → last period → period length → cycle length → all set
+// Without cloud sync (local mode) it starts with a welcome + language step.
+export default function Onboarding({ t, state, withAccount }) {
+  const steps = [...(withAccount ? [] : ['intro']), 'name', 'last', 'period', 'cycle', 'done'];
+  const [i, setI] = useState(0);
+  const [dir, setDir] = useState('next');
+  const [name, setName] = useState(state.profile.name || '');
   const [last, setLast] = useState(addDays(todayISO(), -7));
-  const [periodLen, setPeriodLen] = useState(5);
-  const [cycleLen, setCycleLen] = useState(28);
-  const lang = state.profile.lang;
-  const total = 4;
+  const [periodLen, setPeriodLen] = useState(state.profile.periodLen || 5);
+  const [cycleLen, setCycleLen] = useState(state.profile.cycleLen || 28);
+  const step = steps[i];
+  const questions = steps.filter((s) => s !== 'intro' && s !== 'done');
+  const qIndex = questions.indexOf(step);
 
   function finish() {
-    const days = Array.from({ length: periodLen }, (_, i) => addDays(last, i)).filter((d) => d <= todayISO());
+    const days = Array.from({ length: periodLen }, (_, k) => addDays(last, k)).filter((d) => d <= todayISO());
     setState((s) => ({
       ...s,
       onboarded: true,
+      lastWelcome: todayISO(),
       profile: { ...s.profile, name: name.trim(), periodLen, cycleLen },
       periodDays: [...new Set([...s.periodDays, ...days])].sort(),
     }));
   }
 
-  const next = () => (step === total ? finish() : setStep(step + 1));
+  const next = () => {
+    if (step === 'done') return finish();
+    setDir('next');
+    setI(i + 1);
+  };
+  const back = () => {
+    setDir('prev');
+    setI(i - 1);
+  };
+
+  const art = { intro: 'luteal', name: 'follicular', last: 'menstrual', period: 'menstrual', cycle: 'luteal', done: 'ovulation' }[step];
+  const canGo = step !== 'name' || name.trim();
 
   return (
-    <div className="onboard" data-phase="menstrual">
-      {step > 0 && (
+    <div className="onboard" data-phase={art}>
+      {qIndex >= 0 && (
         <div className="progress" aria-hidden="true">
-          {Array.from({ length: total }, (_, i) => (
-            <i key={i} data-on={i < step} />
+          {questions.map((q, k) => (
+            <i key={q} data-on={k <= qIndex} />
           ))}
         </div>
       )}
 
-      <div className="grow">
-        {step === 0 && (
-          <>
-            <RingMark />
+      <div className={`grow ${dir === 'next' ? 'slide-next' : 'slide-prev'}`} key={step}>
+        <PhaseArt phase={art} size={step === 'done' || step === 'intro' ? 230 : 150} />
+
+        {step === 'intro' && (
+          <div style={{ textAlign: 'center' }}>
             <p className="brand">{t('appName')}</p>
-            <p className="muted" style={{ fontSize: 19, maxWidth: '26ch', margin: 0 }}>
+            <p className="muted" style={{ fontSize: 19, margin: '0 auto', maxWidth: '24ch' }}>
               {t('ob.tagline')}
             </p>
-            <div className="lang-pick" role="group" aria-label={t('ob.language')}>
+            <div className="lang-pick" role="group" aria-label={t('ob.language')} style={{ justifyContent: 'center' }}>
               {LANGS.map((l) => (
                 <button
                   key={l.id}
                   className="chip"
-                  aria-pressed={lang === l.id}
+                  aria-pressed={state.profile.lang === l.id}
                   onClick={() => setState((s) => ({ ...s, profile: { ...s.profile, lang: l.id } }), { local: true })}
                 >
                   {l.label}
                 </button>
               ))}
             </div>
-          </>
+          </div>
         )}
 
-        {step === 1 && (
+        {step === 'name' && (
           <>
             <h1>{t('ob.nameQ')}</h1>
+            <p className="muted">{t('ob.nameHint')}</p>
             <input
               className="input"
-              style={{ marginTop: 20, fontSize: 20, minHeight: 58 }}
+              style={{ marginTop: 8, fontSize: 20, minHeight: 58 }}
               placeholder={t('ob.namePh')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={40}
-              autoFocus
-              onKeyDown={(e) => e.key === 'Enter' && name.trim() && next()}
+              autoComplete="given-name"
+              onKeyDown={(e) => e.key === 'Enter' && canGo && next()}
             />
+            {name.trim() && (
+              <p className="script" style={{ fontSize: 44, margin: '18px 0 0', color: 'var(--phase)' }} aria-hidden="true">
+                {name.trim()}
+              </p>
+            )}
           </>
         )}
 
-        {step === 2 && (
+        {step === 'last' && (
           <>
             <h1>{t('ob.lastQ')}</h1>
             <p className="muted">{t('ob.lastHint')}</p>
             <input
               className="input"
               type="date"
-              style={{ marginTop: 12, fontSize: 20, minHeight: 58 }}
+              style={{ marginTop: 8, fontSize: 20, minHeight: 58 }}
               max={todayISO()}
               value={last}
               onChange={(e) => e.target.value && setLast(e.target.value)}
@@ -89,14 +116,14 @@ export default function Onboarding({ t, state }) {
           </>
         )}
 
-        {step === 3 && (
+        {step === 'period' && (
           <>
             <h1>{t('ob.periodQ')}</h1>
             <Stepper value={periodLen} min={1} max={12} onChange={setPeriodLen} unit={t('ob.days')} />
           </>
         )}
 
-        {step === 4 && (
+        {step === 'cycle' && (
           <>
             <h1>{t('ob.cycleQ')}</h1>
             <p className="muted">{t('ob.cycleHint')}</p>
@@ -104,16 +131,28 @@ export default function Onboarding({ t, state }) {
             <p className="tiny">{t('ob.privacy')}</p>
           </>
         )}
+
+        {step === 'done' && (
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ marginBottom: 4 }}>{t('ob.allSet', { name: '' }).replace(/,\s*$/, ',')}</h1>
+            <p className="script" style={{ fontSize: 64, margin: '0 0 12px', lineHeight: 1.1 }}>
+              {name.trim()}
+            </p>
+            <p className="muted" style={{ maxWidth: '32ch', margin: '0 auto' }}>
+              {t('ob.allSetBody')}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="foot">
-        {step > 0 && (
-          <button className="btn btn-line" onClick={() => setStep(step - 1)}>
+        {i > 0 && step !== 'done' && (
+          <button className="btn btn-line" onClick={back}>
             {t('ob.back')}
           </button>
         )}
-        <button className="btn btn-primary" onClick={next} disabled={step === 1 && !name.trim()}>
-          {step === 0 ? t('ob.start') : step === total ? t('ob.finish') : t('ob.next')}
+        <button className="btn btn-primary" onClick={next} disabled={!canGo}>
+          {step === 'intro' ? t('ob.start') : step === 'done' ? t('ob.enter') : step === 'cycle' ? t('ob.finish') : t('ob.next')}
         </button>
       </div>
     </div>
@@ -121,6 +160,7 @@ export default function Onboarding({ t, state }) {
 }
 
 function Stepper({ value, min, max, onChange, unit }) {
+  const shown = useCountUp(value, 260);
   return (
     <div className="stepper">
       <button className="icon-btn" aria-label="−" onClick={() => onChange(Math.max(min, value - 1))}>
@@ -128,7 +168,7 @@ function Stepper({ value, min, max, onChange, unit }) {
       </button>
       <div style={{ textAlign: 'center' }}>
         <div className="value" aria-live="polite">
-          {value}
+          {shown}
         </div>
         <div className="muted">{unit}</div>
       </div>
@@ -136,24 +176,5 @@ function Stepper({ value, min, max, onChange, unit }) {
         <Plus size={22} />
       </button>
     </div>
-  );
-}
-
-// A still version of the dial as the welcome mark.
-function RingMark() {
-  const n = 28;
-  const colours = (i) =>
-    i < 5 ? 'var(--period)' : i < 8 ? 'var(--follicular)' : i < 14 ? 'var(--fertile)' : i === 13 ? 'var(--ovulation)' : 'var(--luteal)';
-  return (
-    <svg className="hero-ring" viewBox="0 0 300 300" aria-hidden="true">
-      {Array.from({ length: n }, (_, i) => {
-        const len = i === 13 ? 34 : i < 5 ? 28 : i >= 8 && i < 14 ? 24 : 18;
-        return (
-          <g key={i} transform={`translate(150 150) rotate(${(i * 360) / n - 90})`}>
-            <rect x="96" y="-5" width={len} height="10" rx="5" fill={i === 13 ? 'var(--ovulation)' : colours(i)} opacity={i < 14 ? 1 : 0.5} />
-          </g>
-        );
-      })}
-    </svg>
   );
 }

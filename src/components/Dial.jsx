@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { phaseFor } from '../lib/cycle.js';
 import { fromDay, toDay, fmt } from '../lib/dates.js';
+import { useCountUp } from '../lib/motion.js';
 
 // The cycle dial: one petal per day of the current cycle, coloured by phase.
 // Days already lived are solid, the days ahead are translucent. Drag around
@@ -166,6 +167,8 @@ function Preview({ day, idx, t, locale }) {
 }
 
 export function Countdown({ analysis, t }) {
+  const target = !analysis.hasData ? 0 : analysis.inPeriod ? analysis.periodDayOf : analysis.late > 0 ? analysis.late : analysis.daysUntilNext;
+  const shown = useCountUp(target);
   if (!analysis.hasData) return <span className="empty">{t('today.noData')}</span>;
   let lead;
   let big;
@@ -185,7 +188,7 @@ export function Countdown({ analysis, t }) {
   return (
     <>
       <span className="lead">{lead}</span>
-      <span className="big">{big}</span>
+      <span className="big">{shown}</span>
       {unit && <span className="unit">{unit}</span>}
     </>
   );

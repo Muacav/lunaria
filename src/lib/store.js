@@ -15,6 +15,8 @@ export function initialState() {
     logs: {},
     share: { token: null, mood: true, symptoms: false },
     pinHash: null,
+    ownerId: null,
+    lastWelcome: null,
     updatedAt: 0,
   };
 }
@@ -68,13 +70,18 @@ export function useStore(selector = (s) => s) {
   );
 }
 
+// Clears everything on this phone. Language and theme are kept, since they
+// belong to the phone more than to the account.
 export function resetAll() {
   try {
     localStorage.removeItem(KEY);
   } catch {
     /* ignore */
   }
+  const { lang, theme } = state.profile;
   state = initialState();
+  state = { ...state, profile: { ...state.profile, lang, theme } };
+  save();
   listeners.forEach((l) => l(state, { local: true, reset: true }));
 }
 

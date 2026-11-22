@@ -3,7 +3,7 @@ import { Droplet, Minus, Plus, Thermometer, Scale } from 'lucide-react';
 import Sheet from './Sheet.jsx';
 import { getState, saveLog, addPeriodDays } from '../lib/store.js';
 import { fmt } from '../lib/dates.js';
-import { toast } from './toast.jsx';
+import { celebrate } from './Celebrate.jsx';
 
 export const OPTIONS = {
   flow: ['spotting', 'light', 'medium', 'heavy'],
@@ -34,8 +34,8 @@ export default function LogSheet({ date, t, locale, onClose, phase }) {
     saveLog(date, entry);
     // Logging a real flow marks the day as a period day, like in Flo.
     if (entry.flow && entry.flow !== 'spotting') addPeriodDays([date]);
-    toast(t('log.saved'));
     onClose();
+    celebrate(t('log.savedNice'));
   }
 
   const water = entry.water || 0;
@@ -108,7 +108,9 @@ export default function LogSheet({ date, t, locale, onClose, phase }) {
             <button className="icon-btn" aria-label="−" onClick={() => setEntry({ ...entry, water: Math.max(0, water - 1) })}>
               <Minus size={18} />
             </button>
-            <span className="count">{t('log.glasses', { n: water })}</span>
+            <span className="count bump" key={water}>
+              {t('log.glasses', { n: water })}
+            </span>
             <button className="icon-btn" aria-label="+" onClick={() => setEntry({ ...entry, water: water + 1 })}>
               <Plus size={18} />
             </button>
