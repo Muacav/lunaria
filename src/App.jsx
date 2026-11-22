@@ -80,6 +80,10 @@ function Gate({ tab }) {
     else document.documentElement.dataset.theme = th;
   }, [state.profile.lang, state.profile.theme]);
 
+  useEffect(() => {
+    if (sync.syncAvailable && status.user && status.reconciled) sync.saveAccountLang(state.profile.lang).catch(() => {});
+  }, [state.profile.lang, status.user, status.reconciled]);
+
   const phase = analysis.hasData ? (analysis.late > 0 ? 'late' : analysis.phase) : 'menstrual';
   useEffect(() => {
     document.documentElement.dataset.phase = phase;

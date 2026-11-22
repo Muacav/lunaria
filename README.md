@@ -85,6 +85,25 @@ Two settings in the Supabase dashboard:
    address (e.g. `https://lunaria.vercel.app`) and add it to
    **Redirect URLs**.
 
+### Account emails (Resend)
+
+Sent through Resend's SMTP from `Lunaria <lunaria@mocambio.com>` (the
+verified `mocambio.com` domain, EU region), using a send-only Resend key
+limited to that domain.
+
+- Templates: `scripts/email-templates.mjs` generates `supabase/email/*.html`
+  (password reset, sign-up confirmation, email change, sign-in link,
+  confirmation code). Each email is in English, French or Italian, chosen
+  from the `lang` stored on the account (set at sign-up and whenever the
+  language changes in the app), and greets her by name.
+- Images are served by the app at `/email/moonpods.png` and
+  `/email/wordmark.png`, so they appear once the app is live on Vercel.
+- Supabase settings: Authentication → Emails → SMTP Settings
+  (host `smtp.resend.com`, port `465`, user `resend`, password = the Resend
+  key), and the templates under Authentication → Emails → Templates.
+  `node scripts/email-templates.mjs --json` prints all subjects and bodies as
+  one Management API patch.
+
 The free tier pauses a project after a week with no activity. Daily use
 keeps it awake; if it pauses, restore it from the dashboard.
 

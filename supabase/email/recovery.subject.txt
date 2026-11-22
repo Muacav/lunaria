@@ -1,0 +1,1 @@
+{{ $l := or .Data.lang "en" }}{{ if eq $l "fr" }}Réinitialise ton mot de passe Lunaria{{ else if eq $l "it" }}Reimposta la password di Lunaria{{ else }}Reset your Lunaria password{{ end }}

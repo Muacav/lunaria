@@ -1,0 +1,35 @@
+{{ $l := or .Data.lang "en" }}<!doctype html>
+<html lang="{{ $l }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>{{ if eq $l "fr" }}Bienvenue sur Lunaria{{ else if eq $l "it" }}Benvenuta su Lunaria{{ else }}Welcome to Lunaria{{ end }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f6edf1;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#f6edf1" style="background:#f6edf1;">
+  <tr><td align="center" style="padding:32px 16px 40px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:480px;">
+      <tr><td align="center" style="padding-bottom:4px;">
+        <img src="{{ .SiteURL }}/email/moonpods.png" width="120" height="120" alt="" style="display:block;border:0;">
+      </td></tr>
+      <tr><td align="center" style="padding-bottom:18px;">
+        <img src="{{ .SiteURL }}/email/wordmark.png" width="150" alt="Lunaria" style="display:block;border:0;font-family:Georgia, 'Times New Roman', serif;font-size:32px;font-style:italic;color:#2a1a33;">
+      </td></tr>
+      <tr><td style="background:#fffafc;border-radius:24px;padding:34px 30px 30px;">
+        <h1 style="margin:0 0 16px;font-family:Georgia, 'Times New Roman', serif;font-size:28px;font-weight:normal;line-height:1.2;color:#2a1a33;">{{ if eq $l "fr" }}Bienvenue sur Lunaria{{ else if eq $l "it" }}Benvenuta su Lunaria{{ else }}Welcome to Lunaria{{ end }}</h1>
+        <p style="margin:0 0 10px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2a1a33;">{{ if eq $l "fr" }}Bonjour{{ with .Data.name }} {{ . }}{{ end }},{{ else if eq $l "it" }}Ciao{{ with .Data.name }} {{ . }}{{ end }},{{ else }}Hi{{ with .Data.name }} {{ . }}{{ end }},{{ end }}</p>
+        <p style="margin:0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:16px;line-height:1.55;color:#2a1a33;">{{ if eq $l "fr" }}Confirme ton e-mail pour terminer la création de ton compte. Lunaria est gratuit et privé : toi seule vois ton cycle.{{ else if eq $l "it" }}Conferma la tua email per completare la creazione dell’account. Lunaria è gratuito e privato: solo tu vedi il tuo ciclo.{{ else }}Confirm your email to finish creating your account. Lunaria is free and private: only you can see your cycle.{{ end }}</p>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px auto 8px;">
+          <tr><td align="center" bgcolor="#c8324f" style="border-radius:999px;">
+            <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 30px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:16px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:999px;">{{ if eq $l "fr" }}Confirmer mon e-mail{{ else if eq $l "it" }}Conferma la mia email{{ else }}Confirm my email{{ end }}</a>
+          </td></tr>
+        </table>
+        <p style="margin:22px 0 0;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:13px;line-height:1.5;color:#6e5a74;">{{ if eq $l "fr" }}Si tu ne t’es pas inscrite sur Lunaria, ignore cet e-mail.{{ else if eq $l "it" }}Se non ti sei registrata a Lunaria, ignora questa email.{{ else }}If you did not sign up for Lunaria, you can ignore this email.{{ end }}</p>
+      </td></tr>
+      <tr><td align="center" style="padding-top:20px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:12px;color:#6e5a74;">{{ if eq $l "fr" }}Lunaria · ton suivi de cycle privé{{ else if eq $l "it" }}Lunaria · il tuo diario del ciclo privato{{ else }}Lunaria · a private cycle tracker{{ end }}</td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

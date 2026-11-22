@@ -43,10 +43,11 @@ export function subscribeSync(fn) {
 const redirect = () => window.location.origin + window.location.pathname;
 
 export async function signUp(email, password, name) {
+  const lang = getState().profile.lang;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: redirect(), data: { name } },
+    options: { emailRedirectTo: redirect(), data: { name, lang } },
   });
   if (error) throw error;
   // Supabase answers a sign-up for an existing confirmed email with a user
@@ -73,6 +74,15 @@ export async function setNewPassword(password) {
   const { error } = await supabase.auth.updateUser({ password });
   if (error) throw error;
   setStatus({ recovery: false });
+}
+
+// Account emails (password reset…) are written in the language stored on
+// the account, so keep it in step with the app's language.
+export async function saveAccountLang(lang) {
+  const user = status.user;
+  if (!user || user.user_metadata?.lang === lang) return;
+  const { data, error } = await supabase.auth.updateUser({ data: { lang } });
+  if (!error && data?.user) setStatus({ user: data.user });
 }
 
 export async function signOut() {
