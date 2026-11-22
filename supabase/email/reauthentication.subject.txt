@@ -1,0 +1,1 @@
+{{ $l := or .Data.lang "en" }}{{ if eq $l "fr" }}Ton code de confirmation Lunaria{{ else if eq $l "it" }}Il tuo codice di conferma Lunaria{{ else }}Your Lunaria confirmation code{{ end }}

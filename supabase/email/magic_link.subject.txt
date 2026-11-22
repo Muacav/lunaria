@@ -1,0 +1,1 @@
+{{ $l := or .Data.lang "en" }}{{ if eq $l "fr" }}Ton lien de connexion Lunaria{{ else if eq $l "it" }}Il tuo link di accesso a Lunaria{{ else }}Your Lunaria sign-in link{{ end }}

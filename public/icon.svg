@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#2a1a33"/>
+  <g transform="translate(256 256)">
+    <g fill="#c8324f">
+      <rect x="96" y="-11" width="58" height="22" rx="11" transform="rotate(-90)"/>
+      <rect x="96" y="-11" width="58" height="22" rx="11" transform="rotate(-64.3)"/>
+      <rect x="96" y="-11" width="58" height="22" rx="11" transform="rotate(-38.6)"/>
+      <rect x="96" y="-11" width="58" height="22" rx="11" transform="rotate(-12.9)"/>
+    </g>
+    <g fill="#e48fb0">
+      <rect x="96" y="-11" width="40" height="22" rx="11" transform="rotate(12.9)"/>
+      <rect x="96" y="-11" width="40" height="22" rx="11" transform="rotate(38.6)"/>
+    </g>
+    <g fill="#4fb8ad">
+      <rect x="96" y="-11" width="48" height="22" rx="11" transform="rotate(64.3)"/>
+      <rect x="96" y="-11" width="48" height="22" rx="11" transform="rotate(90)"/>
+      <rect x="96" y="-11" width="48" height="22" rx="11" transform="rotate(115.7)"/>
+    </g>
+    <rect x="96" y="-11" width="66" height="22" rx="11" transform="rotate(141.4)" fill="#f0b452"/>
+    <g fill="#a898e0">
+      <rect x="96" y="-11" width="40" height="22" rx="11" transform="rotate(167.1)"/>
+      <rect x="96" y="-11" width="40" height="22" rx="11" transform="rotate(192.9)"/>
+      <rect x="96" y="-11" width="40" height="22" rx="11" transform="rotate(218.6)"/>
+      <rect x="96" y="-11" width="40" height="22" rx="11" transform="rotate(244.3)"/>
+    </g>
+  </g>
+</svg>

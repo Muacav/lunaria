@@ -1,0 +1,1 @@
+{{ $l := or .Data.lang "en" }}{{ if eq $l "fr" }}Confirme ta nouvelle adresse pour Lunaria{{ else if eq $l "it" }}Conferma la nuova email per Lunaria{{ else }}Confirm your new email for Lunaria{{ end }}
